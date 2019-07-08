@@ -11,6 +11,7 @@ class Normalizer(BaseEstimator, TransformerMixin):
     def __init__(self):
         return None
 
+
     def fit(self, X,y = None):
         self.columns_ = X.columns
         self.index_ = X.index
@@ -27,27 +28,96 @@ class PCA_(BaseEstimator, TransformerMixin):
         return None
 
     def fit(self, X, y = None):
-        self.index_ = X.index
-        pca_ = PCA().fit(X)
-        # Let's count the number of principal components that will account
-        # for 95% of the variance of the Data
-        self.count = 0
-        variance = 0
-        for value in pca_.explained_variance_ratio_ :
-            if variance <self.percentage:
-                variance += value
-                self.count += 1
-            else:
-                break
+        OriginalData = X[['open', 'high', 'low', 'close', 'adjusted_close',
+        'volume','dividend_amount', 'split_coefficient']]
 
+        Volume = X[['volume_adi', 'volume_obv','volume_cmf', 'volume_fi',
+        'volume_em', 'volume_vpt', 'volume_nvi']]
+
+        Volatility = X[['volatility_atr', 'volatility_bbh', 'volatility_bbl',
+        'volatility_bbm',
+        'volatility_bbhi', 'volatility_bbli', 'volatility_kcc',
+        'volatility_kch', 'volatility_kcl', 'volatility_kchi',
+        'volatility_kcli', 'volatility_dch', 'volatility_dcl',
+        'volatility_dchi', 'volatility_dcli']]
+
+        Trend = X[['trend_macd', 'trend_macd_signal',
+        'trend_macd_diff', 'trend_ema_fast', 'trend_ema_slow', 'trend_adx',
+        'trend_adx_pos', 'trend_adx_neg', 'trend_vortex_ind_pos',
+        'trend_vortex_ind_neg', 'trend_vortex_diff', 'trend_trix',
+        'trend_mass_index', 'trend_cci', 'trend_dpo', 'trend_kst',
+        'trend_kst_sig', 'trend_kst_diff', 'trend_ichimoku_a',
+        'trend_ichimoku_b', 'trend_visual_ichimoku_a',
+        'trend_visual_ichimoku_b', 'trend_aroon_up', 'trend_aroon_down',
+        'trend_aroon_ind']]
+
+        Momentum = X[['momentum_rsi', 'momentum_mfi', 'momentum_tsi',
+        'momentum_uo', 'momentum_stoch', 'momentum_stoch_signal', 'momentum_wr',
+        'momentum_ao']]
+
+        Others = X[['others_dr', 'others_dlr', 'others_cr']]
+
+        self.index_ = X.index
+        self.number_of_col = []
+        self.dataName = ['OriginalData', 'Volume', 'Volatility', 'Trend', 'Momentum', 'Others']
+
+        for database in [OriginalData, Volume, Volatility, Trend, Momentum, Others]:
+
+            pca_ = PCA().fit(database)
+            self.count = 0
+            variance = 0
+            for value in pca_.explained_variance_ratio_ :
+
+                if variance <self.percentage:
+                    variance += value
+                    self.count += 1
+                else:
+                    self.number_of_col.append(self.count)
+                    break
         return self
 
     def transform(self, X, y = None):
-        # Now let's do a Principal Component analysis
-        etf_ta = PCA(self.count).fit_transform(X)
-        etf_ta = pd.DataFrame(etf_ta, index = self.index_)
+        OriginalData = X[['open', 'high', 'low', 'close', 'adjusted_close', 'volume',
+        'dividend_amount', 'split_coefficient']]
 
-        return etf_ta
+        Volume = X[['volume_adi', 'volume_obv',
+        'volume_cmf', 'volume_fi', 'volume_em', 'volume_vpt', 'volume_nvi']]
+
+        Volatility = X[['volatility_atr', 'volatility_bbh', 'volatility_bbl', 'volatility_bbm',
+        'volatility_bbhi', 'volatility_bbli', 'volatility_kcc',
+        'volatility_kch', 'volatility_kcl', 'volatility_kchi',
+        'volatility_kcli', 'volatility_dch', 'volatility_dcl',
+        'volatility_dchi', 'volatility_dcli']]
+
+        Trend = X[['trend_macd', 'trend_macd_signal',
+        'trend_macd_diff', 'trend_ema_fast', 'trend_ema_slow', 'trend_adx',
+        'trend_adx_pos', 'trend_adx_neg', 'trend_vortex_ind_pos',
+        'trend_vortex_ind_neg', 'trend_vortex_diff', 'trend_trix',
+        'trend_mass_index', 'trend_cci', 'trend_dpo', 'trend_kst',
+        'trend_kst_sig', 'trend_kst_diff', 'trend_ichimoku_a',
+        'trend_ichimoku_b', 'trend_visual_ichimoku_a',
+        'trend_visual_ichimoku_b', 'trend_aroon_up', 'trend_aroon_down',
+        'trend_aroon_ind']]
+
+        Momentum = X[['momentum_rsi', 'momentum_mfi', 'momentum_tsi',
+        'momentum_uo', 'momentum_stoch', 'momentum_stoch_signal', 'momentum_wr',
+        'momentum_ao']]
+
+        Others = X[['others_dr', 'others_dlr', 'others_cr']]
+
+        count_ = 0
+
+        final_data = pd.DataFrame(index = self.index_)
+        for database in [OriginalData, Volume, Volatility, Trend, Momentum, Others]:
+            indexCol = self.number_of_col[count_]
+            colnames = []
+            for i in range(indexCol):
+                colnames.append(self.dataName[count_]+'_'+str(i))
+
+            temp = PCA(indexCol).fit_transform(database)
+            final_data = pd.concat([final_data,pd.DataFrame(temp, index = self.index_, columns = colnames)], axis = 1)
+            count_ += 1
+        return final_data
 
 class GetTA( BaseEstimator, TransformerMixin):
     #Class Constructor
@@ -107,6 +177,5 @@ class GetTA( BaseEstimator, TransformerMixin):
         # Daily Return (DR)
         # Daily Log Return (DLR)
         # Cumulative Return (CR)
-
 
         return etf_ta
